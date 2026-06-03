@@ -1,13 +1,44 @@
 # 微信公众号内容流水线 (WeChat Content Pipeline)
 
-自动化内容采集 → 筛选 → 写作 → 配图 → 发布至微信公众号的完整流水线。
+自动化内容采集 → 清洗聚合 → 选题 → 写作 → 配图 → 发布至微信公众号的完整流水线。
+
+## 当前主链路
+
+仓库已经切到新的文件制内容中台。当前推荐入口不是直接调用旧脚本，而是通过 `platform_cli.py`：
+
+```bash
+python3 platform_cli.py run collect-daily --date 2026-06-03
+python3 platform_cli.py run article-daily --date 2026-06-03
+python3 platform_cli.py run case-daily --date 2026-06-03
+python3 platform_cli.py run cleanup --date 2026-06-03
+```
+
+其中：
+
+- `collect-daily` 负责写 `platform/ingest`、`platform/normalize`、`platform/curate`、`platform/datasets`
+- `article-daily` 从同日 `platform/datasets/article_pool.json` 读取候选，再调用旧 `write_article.py` 负责写作
+- `case-daily` 从同日 `platform/datasets/case_pool.json` 读取候选，再调用旧 `decompose_case_study.py` 负责写作
+- `cleanup` 清理 30 天前的中间产物
+
+旧脚本仍在仓库里，但它们不再是推荐的主调度入口。
 
 ## 架构概览
 
 ```
-cron 05:00 → run_all.sh        ← 日常素材采集管线
-cron 06:00 → run_daily_article.sh  ← 每日公众号文章生成
-cron 10:00 → decompose_case_study.py ← 每日案例拆解
+cron 05:00 → run_all.sh              ← 唤醒 collect-daily + cleanup
+cron 06:00 → run_daily_article.sh    ← 唤醒 article-daily + case-daily
+```
+
+## 平台目录
+
+```text
+platform/
+├── ingest/raw/YYYY-MM-DD/        # 原始采集输入
+├── normalize/YYYY-MM-DD/         # 规范化素材
+├── curate/YYYY-MM-DD/            # 聚类、打分、过滤后的素材
+├── datasets/YYYY-MM-DD/          # article_pool / case_pool / selection / materials bridge
+├── jobs/YYYY-MM-DD/              # 每个 job 的 job.json、步骤状态、artifact 指针
+└── state/                        # 长生命周期状态（后续扩展）
 ```
 
 ## 目录结构
