@@ -1,7 +1,12 @@
 from pathlib import Path
 
 from content_platform.cli import build_parser
-from content_platform.runtime import run_cleanup, run_collect_daily
+from content_platform.runtime import (
+    run_article_daily,
+    run_case_daily,
+    run_cleanup,
+    run_collect_daily,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -11,6 +16,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run":
         if args.job_name == "collect-daily":
             run_collect_daily(args.date, workspace_dir=workspace_dir)
+            return 0
+        if args.job_name == "article-daily":
+            run_article_daily(args.date, workspace_dir=workspace_dir)
+            return 0
+        if args.job_name == "case-daily":
+            run_case_daily(args.date, workspace_dir=workspace_dir)
             return 0
         if args.job_name == "cleanup":
             run_cleanup(args.date, workspace_dir=workspace_dir)

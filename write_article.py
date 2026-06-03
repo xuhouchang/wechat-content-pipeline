@@ -574,7 +574,12 @@ def write_article(
     if materials_override:
         # Bypass all_urls.tsv reading — materials already provided by agent
         print("\n1️⃣  Using agent-provided materials (--materials override)...")
-        enriched = materials_override
+        enriched = []
+        for item in materials_override:
+            normalized_item = dict(item)
+            if "content" not in normalized_item and normalized_item.get("content_text"):
+                normalized_item["content"] = normalized_item["content_text"]
+            enriched.append(normalized_item)
         print(f"  Loaded {len(enriched)} materials from override")
 
         # ⛔ CODE-LEVEL FILTER: Remove materials already marked 'used'

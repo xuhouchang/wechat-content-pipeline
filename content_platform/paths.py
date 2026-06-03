@@ -22,3 +22,6 @@ class PlatformPaths:
 
     def job_dir(self, date_str: str, job_name: str) -> Path:
         return self.jobs_dir(date_str) / job_name
+
+    def datasets_dir(self, date_str: str) -> Path:
+        return self.platform_dir / "datasets" / date_str
