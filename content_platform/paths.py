@@ -16,3 +16,9 @@ class PlatformPaths:
 
     def ingest_raw_dir(self, date_str: str) -> Path:
         return self.platform_dir / "ingest" / "raw" / date_str
+
+    def jobs_dir(self, date_str: str) -> Path:
+        return self.platform_dir / "jobs" / date_str
+
+    def job_dir(self, date_str: str, job_name: str) -> Path:
+        return self.jobs_dir(date_str) / job_name
