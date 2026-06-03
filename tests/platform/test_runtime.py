@@ -3,6 +3,14 @@ from pathlib import Path
 from content_platform.runtime import run_article_daily, run_case_daily, run_collect_daily
 
 
+LONG_ARTICLE_TEXT = " ".join(
+    [
+        "enterprise workflow redesign manager incentives trust governance adoption resistance permissions"
+        for _ in range(30)
+    ]
+)
+
+
 def test_collect_daily_writes_job_file(tmp_path: Path):
     result = run_collect_daily(
         date_str="2026-06-03",
@@ -12,7 +20,7 @@ def test_collect_daily_writes_job_file(tmp_path: Path):
                 "url": "https://example.com/adoption",
                 "title": "Why enterprise AI adoption stalls",
                 "summary": "workflow redesign and manager incentives",
-                "content_text": "enterprise workflow redesign manager incentives trust governance",
+                "content_text": LONG_ARTICLE_TEXT,
                 "source_type": "rss",
                 "source_name": "Example Feed",
                 "execution_detail_score": 0.8,
@@ -149,3 +157,49 @@ def test_case_daily_fails_when_no_candidates(tmp_path: Path):
     )
 
     assert result["status"] == "failed"
+
+
+def test_article_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: Path):
+    run_collect_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "url": "https://example.com/adoption",
+                "title": "Why enterprise AI adoption stalls",
+                "summary": "workflow redesign and manager incentives",
+                "content_text": LONG_ARTICLE_TEXT,
+                "source_type": "rss",
+                "source_name": "Example Feed",
+                "execution_detail_score": 0.8,
+                "novelty_score": 0.7,
+            }
+        ],
+    )
+
+    result = run_article_daily(date_str="2026-06-03", workspace_dir=tmp_path)
+
+    assert result["status"] == "success"
+
+
+def test_case_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: Path):
+    run_collect_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "url": "https://example.com/case",
+                "title": "Support org agent deployment",
+                "summary": "execution details for workflow redesign",
+                "content_text": LONG_ARTICLE_TEXT,
+                "source_type": "rss",
+                "source_name": "Example Feed",
+                "execution_detail_score": 0.9,
+                "novelty_score": 0.7,
+            }
+        ],
+    )
+
+    result = run_case_daily(date_str="2026-06-03", workspace_dir=tmp_path)
+
+    assert result["status"] == "success"
