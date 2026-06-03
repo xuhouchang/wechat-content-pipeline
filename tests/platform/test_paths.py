@@ -22,3 +22,23 @@ def test_platform_cli_exposes_expected_jobs():
     assert args.command == "run"
     assert args.job_name == "collect-daily"
     assert args.date == "2026-06-03"
+
+
+def test_platform_cli_main_dispatches_collect_job(tmp_path: Path):
+    from platform_cli import main
+
+    exit_code = main(
+        [
+            "run",
+            "collect-daily",
+            "--date",
+            "2026-06-03",
+            "--workspace-dir",
+            str(tmp_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert (
+        tmp_path / "platform" / "jobs" / "2026-06-03" / "collect-daily" / "job.json"
+    ).exists()

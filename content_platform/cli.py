@@ -11,5 +11,6 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("job_name", choices=JOB_NAMES)
     run_parser.add_argument("--date", required=True)
+    run_parser.add_argument("--workspace-dir")
 
     return parser
