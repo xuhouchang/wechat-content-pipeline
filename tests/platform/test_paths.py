@@ -46,6 +46,8 @@ def test_platform_cli_main_dispatches_collect_job(tmp_path: Path):
 
 def test_platform_cli_main_dispatches_article_job(tmp_path: Path):
     from platform_cli import main
+    materials_file = tmp_path / "materials.json"
+    materials_file.write_text("[]", encoding="utf-8")
 
     exit_code = main(
         [
@@ -55,10 +57,12 @@ def test_platform_cli_main_dispatches_article_job(tmp_path: Path):
             "2026-06-03",
             "--workspace-dir",
             str(tmp_path),
+            "--materials-file",
+            str(materials_file),
         ]
     )
 
-    assert exit_code == 0
+    assert exit_code == 1
     assert (
         tmp_path / "platform" / "jobs" / "2026-06-03" / "article-daily" / "job.json"
     ).exists()

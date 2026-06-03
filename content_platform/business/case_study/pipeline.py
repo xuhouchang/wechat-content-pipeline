@@ -1,8 +1,8 @@
-import json
 from pathlib import Path
 
 from content_platform.business.case_study.ranker import rank_case_candidates
 from content_platform.datasets.case_pool import build_case_pool
+from content_platform.storage.json_store import write_json
 
 
 def run_case_study_pipeline(
@@ -19,8 +19,14 @@ def run_case_study_pipeline(
     dataset_dir = workspace_dir / "platform" / "datasets" / date_str
     dataset_dir.mkdir(parents=True, exist_ok=True)
     selection_file = dataset_dir / "case_selection.json"
-    selection_file.write_text(
-        json.dumps({"candidates": ranked, "selected": selected}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return {"candidates": ranked, "selected": selected, "selection_file": str(selection_file)}
+    materials_file = dataset_dir / "case_materials.json"
+    status = "success" if selected else "failed"
+    write_json(selection_file, {"candidates": ranked, "selected": selected, "status": status})
+    write_json(materials_file, [selected] if selected else [])
+    return {
+        "candidates": ranked,
+        "selected": selected,
+        "selection_file": str(selection_file),
+        "materials_file": str(materials_file),
+        "status": status,
+    }

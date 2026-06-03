@@ -6,6 +6,7 @@ from content_platform.business.daily_article.pipeline import run_daily_article_p
 from content_platform.cleanup import prune_old_platform_data
 from content_platform.job_state import JobStateStore
 from content_platform.paths import PlatformPaths
+from content_platform.storage.json_store import read_json
 
 
 def run_collect_daily(date_str: str, workspace_dir: Path | None = None) -> dict:
@@ -61,8 +62,11 @@ def run_article_daily(
         {"name": "build_article_pool", "status": "success"},
         {"name": "select_primary_cluster", "status": "success"},
     ]
-    job["status"] = "success"
-    job["artifacts"] = {"selection_file": result.get("selection_file")}
+    job["status"] = result.get("status", "failed")
+    job["artifacts"] = {
+        "selection_file": result.get("selection_file"),
+        "materials_file": result.get("materials_file"),
+    }
     store.write_job(job)
     return job
 
@@ -87,7 +91,19 @@ def run_case_daily(
         {"name": "build_case_pool", "status": "success"},
         {"name": "rank_case_candidates", "status": "success"},
     ]
-    job["status"] = "success"
-    job["artifacts"] = {"selection_file": result.get("selection_file")}
+    job["status"] = result.get("status", "failed")
+    job["artifacts"] = {
+        "selection_file": result.get("selection_file"),
+        "materials_file": result.get("materials_file"),
+    }
     store.write_job(job)
     return job
+
+
+def load_materials_file(materials_file: str | None) -> list[dict] | None:
+    if not materials_file:
+        return None
+    path = Path(materials_file)
+    if not path.exists():
+        return None
+    return read_json(path)
