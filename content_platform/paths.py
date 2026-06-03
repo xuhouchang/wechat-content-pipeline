@@ -17,6 +17,12 @@ class PlatformPaths:
     def ingest_raw_dir(self, date_str: str) -> Path:
         return self.platform_dir / "ingest" / "raw" / date_str
 
+    def normalize_dir(self, date_str: str) -> Path:
+        return self.platform_dir / "normalize" / date_str
+
+    def curate_dir(self, date_str: str) -> Path:
+        return self.platform_dir / "curate" / date_str
+
     def jobs_dir(self, date_str: str) -> Path:
         return self.platform_dir / "jobs" / date_str
 

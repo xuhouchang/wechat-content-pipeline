@@ -4,11 +4,51 @@ from content_platform.runtime import run_article_daily, run_case_daily, run_coll
 
 
 def test_collect_daily_writes_job_file(tmp_path: Path):
-    result = run_collect_daily(date_str="2026-06-03", workspace_dir=tmp_path)
+    result = run_collect_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "url": "https://example.com/adoption",
+                "title": "Why enterprise AI adoption stalls",
+                "summary": "workflow redesign and manager incentives",
+                "content_text": "enterprise workflow redesign manager incentives trust governance",
+                "source_type": "rss",
+                "source_name": "Example Feed",
+                "execution_detail_score": 0.8,
+                "novelty_score": 0.7,
+            },
+            {
+                "url": "https://example.com/pricing",
+                "title": "GitHub changes Copilot pricing tiers",
+                "summary": "new package pricing for teams",
+                "content_text": "pricing package subscription tier changes for paid plans",
+                "source_type": "blogs",
+                "source_name": "Example Blog",
+                "execution_detail_score": 0.1,
+                "novelty_score": 0.9,
+            },
+        ],
+    )
 
     assert result["job_type"] == "collect-daily"
     assert (
         tmp_path / "platform" / "jobs" / "2026-06-03" / "collect-daily" / "job.json"
+    ).exists()
+    assert (
+        tmp_path / "platform" / "ingest" / "raw" / "2026-06-03" / "materials.json"
+    ).exists()
+    assert (
+        tmp_path / "platform" / "normalize" / "2026-06-03" / "materials.json"
+    ).exists()
+    assert (
+        tmp_path / "platform" / "curate" / "2026-06-03" / "materials.json"
+    ).exists()
+    assert (
+        tmp_path / "platform" / "datasets" / "2026-06-03" / "article_pool.json"
+    ).exists()
+    assert (
+        tmp_path / "platform" / "datasets" / "2026-06-03" / "case_pool.json"
     ).exists()
 
 
