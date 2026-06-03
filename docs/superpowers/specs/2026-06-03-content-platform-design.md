@@ -24,6 +24,7 @@ The current repository already moved part of the logic out of OpenClaw, but it s
 - URL status updates happen in multiple places with slightly different logic
 - business logic reads raw material storage directly instead of consuming a stable curated dataset
 - article diversity is controlled by heuristics bolted onto the writer, not by the shared material layer
+- editorial filtering is too broad, so topics that are AI-related but not truly about enterprise organizational change still enter the writing pool
 
 This produces exactly the failures the user described:
 
@@ -282,7 +283,14 @@ Output:
 
 The important boundary is that neither flow should implement its own source discovery, URL dedup, tagging store, or material usage registry.
 
-## Dedup and anti-repetition design
+## Material aggregation and anti-repetition design
+
+The platform should stop treating this as “dedup only”. The actual requirement is:
+
+- remove literal duplicates
+- merge near-duplicate materials into one usable evidence cluster
+- keep enough related materials to enrich one article or case study
+- block repeated topic selection across recent outputs
 
 The current URL-only dedup must be replaced by three levels of code-driven control.
 
@@ -296,13 +304,60 @@ The current URL-only dedup must be replaced by three levels of code-driven contr
 - hash normalized main text
 - if different URLs produce near-identical text, keep one primary record and mark others duplicate
 
-### Level 3: semantic cluster dedup
+### Level 3: semantic cluster aggregation
 
-- cluster materials by title, source entities, key signals, and content similarity
+- cluster materials by title semantics, source entities, time window, key signals, tag outputs, and content similarity
 - each cluster gets one `cluster_id`
+- each cluster stores:
+  - one `primary_material`
+  - zero or more `supporting_materials`
+  - a `cluster_summary`
+  - `cluster_signals`
 - article and case pipelines select clusters, not raw URLs
 
-This is the missing layer that prevents “同一话题换个来源再写一次”.
+This is the missing layer that prevents “同一话题换个来源再写一次”, while still allowing a business pipeline to combine several similar materials into one richer output.
+
+## Editorial fit scoring
+
+Relevance alone is not enough. A material can be AI-related and still be a bad fit for this project.
+
+The platform should add `editorial_fit_score` as a first-class field during curation and dataset building.
+
+High-fit materials are those that can be written into:
+
+- enterprise organizational change
+- workflow redesign
+- human-AI work split
+- adoption resistance and trust
+- governance, permissions, and ownership boundaries
+- performance, roles, incentives, and management shifts
+- mechanism-level interpretation rather than news recap
+
+Low-fit or reject materials are those that are mostly:
+
+- pricing strategy
+- packaging changes
+- feature launches
+- partnership or funding news
+- product updates without organizational implications
+- business strategy moves that do not clearly connect to process, org, or management change
+
+This directly addresses cases like a platform pricing story that is AI-related but does not say anything meaningful about how enterprises reorganize around AI.
+
+## Topic selection rule for business strategy stories
+
+Business strategy stories are not excluded by category. They are excluded unless they can be translated into enterprise organizational meaning.
+
+For example, a pricing or packaging change only belongs in the writing pool if the material supports analysis about at least one of:
+
+- procurement and budget ownership changes
+- permissioning and access control shifts
+- team-level tool adoption constraints
+- collaboration boundary changes
+- Shadow AI governance
+- organizational standardization pressure
+
+If that bridge cannot be made from the source material and supporting cluster evidence, the material must not become a primary topic candidate.
 
 ## Topic memory and novelty scoring
 
@@ -331,6 +386,7 @@ Before topic selection:
 - exclude clusters used in the last N days
 - penalize topic labels overused in the last N outputs
 - penalize repeated entity combinations
+- penalize business-strategy-only topics that lack organizational signals
 - require a minimum novelty score before a topic can be selected
 
 Recommended defaults:
@@ -338,6 +394,7 @@ Recommended defaults:
 - hard block same `cluster_id` for 14 days
 - soft block same first-order topic combination for 7 outputs
 - soft block same named entity pair for 5 outputs
+- hard block any topic candidate whose `editorial_fit_score` is below the primary-topic threshold
 
 This should be deterministic code, not an instruction hidden inside a writing prompt.
 
@@ -359,6 +416,7 @@ Contains only materials that pass:
 
 Also contains scoring fields:
 
+- `editorial_fit_score`
 - `novelty_score`
 - `narrative_score`
 - `evidence_score`
@@ -376,6 +434,7 @@ Contains only materials that pass:
 
 Also contains:
 
+- `editorial_fit_score`
 - `case_depth_score`
 - `verification_candidates`
 - `execution_detail_score`
