@@ -325,3 +325,17 @@ python3 write_article.py --dry-run
 2. **封面图**：建议尺寸 900×900px（1:1缩略图）和 1200×627px（2.35:1文章顶部）
 3. **API限频**：WeChat API有调用频率限制，发布间隔至少1分钟
 4. **图片**：公众号正文图片必须通过 `cgi-bin/media/uploadimg` 上传获取CDN URL
+
+## 配置补充说明
+
+### sources.yaml
+
+所有采集源的配置文件，包含：
+- **reader**: 内容获取方式（direct HTTP / Jina Reader API）
+- **rss**: 30+ RSS源（One Useful Thing、Import AI、TLDR AI、TechCrunch等科技媒体）
+- **blogs**: AI公司博客（OpenAI、Anthropic、Google、Microsoft等20+）
+- **consulting**: 咨询报告搜索词（McKinsey、BCG等10家）
+- **thinktank**: 智库页面（MIT Sloan、HBR、Wharton、RAND）
+- **filtering**: LLM过滤规则配置（6个相关度维度及权重）
+
+> ⚠️ `sources.yaml` 中的 API key 已脱敏为占位符，使用前需替换为真实值。
