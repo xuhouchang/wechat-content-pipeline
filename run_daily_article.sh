@@ -2,7 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PYTHON="${PYTHON:-python3}"
+DEFAULT_PYTHON="$SCRIPT_DIR/.venv/bin/python"
+if [[ -x "$DEFAULT_PYTHON" ]]; then
+  PYTHON="${PYTHON:-$DEFAULT_PYTHON}"
+else
+  PYTHON="${PYTHON:-python3}"
+fi
 DATE="${DATE:-$(date +%Y-%m-%d)}"
 LOG_DIR="${SCRIPT_DIR}/logs"
 LOG_FILE="${LOG_DIR}/article_${DATE}.log"

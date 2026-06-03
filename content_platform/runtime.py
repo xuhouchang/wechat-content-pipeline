@@ -7,9 +7,14 @@ from content_platform.business.case_study.pipeline import run_case_study_pipelin
 from content_platform.business.daily_article.pipeline import run_daily_article_pipeline
 from content_platform.curate.clustering import assign_clusters
 from content_platform.curate.scoring import editorial_fit_score
+from content_platform.curate.scoring import execution_detail_score
 from content_platform.cleanup import prune_old_platform_data
 from content_platform.datasets.article_pool import build_article_pool
 from content_platform.datasets.case_pool import build_case_pool
+from content_platform.ingest.blogs import load_blog_materials
+from content_platform.ingest.cases import load_case_materials
+from content_platform.ingest.consulting import load_consulting_materials
+from content_platform.ingest.rss import load_rss_materials
 from content_platform.job_state import JobStateStore
 from content_platform.normalize.canonicalize import build_material_record
 from content_platform.paths import PlatformPaths
@@ -36,6 +41,14 @@ def _curate_materials(raw_materials: list[dict], date_str: str) -> list[dict]:
         )
         if "execution_detail_score" in raw:
             enriched["execution_detail_score"] = raw["execution_detail_score"]
+        else:
+            enriched["execution_detail_score"] = execution_detail_score(
+                {
+                    "title": enriched.get("title", ""),
+                    "summary": enriched.get("summary", ""),
+                    "content_text": enriched.get("content_text", ""),
+                }
+            )
         if "novelty_score" in raw:
             enriched["novelty_score"] = raw["novelty_score"]
         if "url" in raw:
@@ -59,7 +72,13 @@ def run_collect_daily(
     store = JobStateStore(job_dir)
 
     job = store.start_job(job_type="collect-daily", date_str=date_str)
-    raw_materials = materials or []
+    raw_materials = materials
+    if raw_materials is None:
+        raw_materials = []
+        raw_materials.extend(load_rss_materials(date_str))
+        raw_materials.extend(load_blog_materials(date_str))
+        raw_materials.extend(load_consulting_materials(date_str))
+        raw_materials.extend(load_case_materials(date_str))
     curated_materials = _curate_materials(raw_materials, date_str=date_str)
     article_pool = build_article_pool(curated_materials, topic_memory={"recent_outputs": []})
     case_pool = build_case_pool(curated_materials, topic_memory={"recent_outputs": []})
@@ -129,6 +148,35 @@ def _invoke_legacy_writer(script_path: Path, date_str: str, materials_file: str)
     return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
 
+def _write_job_log(job_dir: Path, filename: str, content: str) -> str:
+    path = job_dir / filename
+    path.write_text(content, encoding="utf-8")
+    return str(path)
+
+
+def _extract_output_dir(stdout: str) -> str | None:
+    for raw_line in stdout.splitlines():
+        line = raw_line.strip()
+        if "Output:" not in line:
+            continue
+        return line.split("Output:", 1)[1].strip().rstrip("/")
+    return None
+
+
+def _capture_writer_artifacts(job_dir: Path, result: subprocess.CompletedProcess) -> dict:
+    stdout = result.stdout or ""
+    stderr = result.stderr or ""
+    artifacts = {
+        "writer_returncode": result.returncode,
+        "writer_stdout_log": _write_job_log(job_dir, "writer_stdout.log", stdout),
+        "writer_stderr_log": _write_job_log(job_dir, "writer_stderr.log", stderr),
+    }
+    output_dir = _extract_output_dir(stdout)
+    if output_dir:
+        artifacts["writer_output_dir"] = output_dir
+    return artifacts
+
+
 def run_article_daily(
     date_str: str,
     workspace_dir: Path | None = None,
@@ -161,7 +209,7 @@ def run_article_daily(
             date_str=date_str,
             materials_file=result["materials_file"],
         )
-        job["artifacts"]["writer_stdout"] = legacy_result.stdout
+        job["artifacts"].update(_capture_writer_artifacts(job_dir, legacy_result))
         if legacy_result.returncode != 0:
             job["status"] = "failed"
     store.write_job(job)
@@ -200,7 +248,7 @@ def run_case_daily(
             date_str=date_str,
             materials_file=result["materials_file"],
         )
-        job["artifacts"]["writer_stdout"] = legacy_result.stdout
+        job["artifacts"].update(_capture_writer_artifacts(job_dir, legacy_result))
         if legacy_result.returncode != 0:
             job["status"] = "failed"
     store.write_job(job)

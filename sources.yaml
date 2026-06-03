@@ -1,0 +1,328 @@
+# ═══════════════════════════════════════════════
+# 内容采集器 — 渠道配置
+# ═══════════════════════════════════════════════
+# 所有采集脚本从本文件读取源列表，修改/增删源不改代码
+
+# ── 内容获取方式配置 ──
+# 所有 fetch 调用按以下优先级尝试:
+#   1. direct — 直接 HTTP 请求提取正文（默认）
+#      - 请求头带 Accept: text/markdown → Cloudflare 开启了 Markdown for Agents
+#        的站点会自动返回纯 Markdown（token 减少 60-80%）。不需要任何 API Key。
+#      - 如果服务器不支持 text/markdown，正常返回 HTML。
+#   2. jina — direct 失败时的兜底。Jina Reader API 能绕过多数反爬。
+#
+# 单个源可以 override:
+#   fetch_mode: jina (强制用 Jina，不走 direct)
+reader:
+  direct: {}
+  jina:
+    enabled: true
+    api_key: "your_jina_api_key_here"
+    base_url: "https://r.jina.ai"
+
+# ── RSS Feeds ──
+# 每天采集
+rss:
+  - name: "One Useful Thing (Ethan Mollick)"
+    url: "https://www.oneusefulthing.org/feed"
+    priority: core
+    topics: ["enterprise-ai", "management", "education"]
+
+  - name: "Import AI (Jack Clark)"
+    url: "https://importai.substack.com/feed"
+    priority: high
+    topics: ["ai-research", "policy", "trends"]
+
+  - name: "TLDR AI"
+    url: "https://tldr.tech/ai/rss"
+    priority: medium
+    topics: ["news", "roundup"]
+
+  - name: "BVP (Bessemer)"
+    url: "https://www.bvp.com/atlas/rss"
+    priority: medium
+    topics: ["enterprise-ai", "startups", "vc"]
+
+  - name: "Understanding AI (Timothy B. Lee)"
+    url: "https://www.understandingai.org/feed"
+    priority: high
+    topics: ["ai-explainer", "trends", "policy"]
+
+  # ── 新增 RSS ──
+  - name: "Enterprise AI Weekly (Paul O'Brien)"
+    url: "https://enterpriseaiweekly.substack.com/feed"
+    priority: high
+    topics: ["enterprise-ai", "news", "roundup"]
+
+  - name: "The AI Economy (Ken Yeung)"
+    url: "https://theaieconomy.substack.com/feed"
+    priority: high
+    topics: ["enterprise-ai", "economy", "trends"]
+
+  - name: "a16z Enterprise"
+    url: "https://a16zenterprise.substack.com/feed"
+    priority: high
+    topics: ["enterprise-ai", "vc", "startups"]
+
+  - name: "Exec X AI (Khaled Shivji)"
+    url: "https://execxai.substack.com/feed"
+    priority: high
+    topics: ["enterprise-ai", "leadership", "management"]
+
+  - name: "SaaS Intelligence (The Intelligence Council)"
+    url: "https://saasintelligence.substack.com/feed"
+    priority: medium
+    topics: ["saas", "enterprise-ai", "b2b"]
+
+  - name: "TMLS Insights"
+    url: "https://tmlsinsights.substack.com/feed"
+    priority: high
+    topics: ["enterprise-ai", "case-study", "agent"]
+
+  - name: "AI Supremacy"
+    url: "https://www.ai-supremacy.com/feed"
+    priority: medium
+    topics: ["ai-news", "trends", "analysis"]
+
+  - name: "Writer Engineering Blog"
+    url: "https://writer.com/feed/"
+    priority: medium
+    topics: ["ai-agent", "engineering", "enterprise"]
+
+  - name: "AWS Machine Learning Blog"
+    url: "https://aws.amazon.com/blogs/machine-learning/feed/"
+    priority: high
+    topics: ["engineering", "cloud", "enterprise"]
+
+  - name: "Hugging Face Blog"
+    url: "https://huggingface.co/blog/feed.xml"
+    priority: medium
+    topics: ["open-source", "research", "engineering"]
+
+  - name: "Facebook Engineering"
+    url: "https://engineering.fb.com/feed/"
+    priority: medium
+    topics: ["engineering", "infrastructure", "ml-systems"]
+
+  # ── 科技媒体 RSS ──
+  # 每日采集，filter 会筛选出有 AI 企业落地相关性的条目
+  - name: "TechCrunch AI"
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+    priority: high
+    topics: ["news", "startup", "funding"]
+
+  - name: "The New Stack AI"
+    url: "https://thenewstack.io/ai/feed/"
+    priority: medium
+    topics: ["engineering", "platform", "news"]
+
+  - name: "Wired AI"
+    url: "https://www.wired.com/feed/tag/ai/latest/rss"
+    priority: medium
+    topics: ["news", "culture", "policy"]
+
+  - name: "MIT Technology Review AI"
+    url: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
+    priority: high
+    topics: ["research", "policy", "trends"]
+
+  - name: "AI News"
+    url: "https://www.artificialintelligence-news.com/feed/"
+    priority: medium
+    topics: ["news", "enterprise", "technology"]
+
+  - name: "Ars Technica AI"
+    url: "https://arstechnica.com/ai/feed/"
+    priority: medium
+    topics: ["news", "tech", "policy"]
+
+  - name: "VentureBeat AI"
+    url: "https://venturebeat.com/category/ai/feed/"
+    priority: medium
+    topics: ["news", "enterprise", "funding"]
+
+  - name: "ZDNet AI"
+    url: "https://www.zdnet.com/topic/artificial-intelligence/rss.xml"
+    priority: medium
+    topics: ["news", "product", "enterprise"]
+
+  # John D. Cook Blog removed — pure C/Python/math topics, no AI enterprise coverage
+
+# ── Company Blogs ──
+# 每天采集
+blogs:
+  - name: "OpenAI"
+    url: "https://openai.com/index/"
+    topics: ["research", "product", "safety"]
+    extract_fn: "find_links"  # find links on list page
+
+  - name: "Anthropic Research"
+    url: "https://www.anthropic.com/research"
+    topics: ["research", "safety", "alignment"]
+
+  - name: "Claude Blog"
+    url: "https://claude.com/blog"
+    topics: ["product", "enterprise", "startups"]
+
+  - name: "Anthropic"
+    url: "https://www.anthropic.com/news"
+    topics: ["enterprise", "product", "announcements"]
+
+  # Google DeepMind removed — page structure incompatible, consistently 0 links extracted
+
+  - name: "Google AI"
+    url: "https://blog.google/technology/ai/"
+    topics: ["research", "product"]
+
+  - name: "Microsoft AI"
+    url: "https://blogs.microsoft.com/ai/"
+    topics: ["research", "product", "enterprise"]
+
+  - name: "Mistral AI"
+    url: "https://mistral.ai/news/"
+    topics: ["research", "product", "open-source"]
+
+  - name: "Salesforce AI"
+    url: "https://www.salesforce.com/blog/category/ai-research/"
+    topics: ["research", "enterprise", "crm"]
+
+  # Meta AI removed — consistently pure hardware/technical announcements (chips, infrastructure), no enterprise content
+  # - name: "Meta AI"
+  #   url: "https://ai.meta.com/blog/"
+
+  - name: "xAI"
+    url: "https://x.ai/blog"
+    topics: ["research", "product"]
+
+  - name: "Y Combinator"
+    url: "https://www.ycombinator.com/blog/"
+    topics: ["startups", "fundraising"]
+
+  # YC Startup School removed — JS-rendered page, consistently 0 links extracted
+
+  - name: "Anthropic Interpretability"
+    url: "https://www.anthropic.com/research/team/interpretability"
+    topics: ["interpretability", "research", "safety"]
+
+  - name: "Google Research Blog"
+    url: "https://research.google/blog/"
+    topics: ["research", "science", "engineering"]
+
+  # ── Enterprise AI Case Study Sources  ──
+  # 英文企业AI落地案例博客
+  - name: "923 (ninetwothree) Case Studies"
+    url: "https://www.ninetwothree.co/blog/"
+    topics: ["case-study", "enterprise-ai", "deployment"]
+  # AI Monk removed — consistently returns 0 links (page structure incompatible)
+  # Ampcome Insights removed — vendor tutorial/promo content, no enterprise case studies
+  # DigitalDefynd AI Case Studies removed — strong anti-scraping, consistently 0 links
+
+  # ── 新增 Blog 源 ──
+  - name: "Intercom Blog"
+    url: "https://www.intercom.com/blog"
+    topics: ["customer-service", "ai-agent", "enterprise"]
+
+  - name: "Notion AI"
+    url: "https://www.notion.com/blog/topic/artificial-intelligence"
+    topics: ["productivity", "enterprise", "workflow"]
+
+  - name: "Writer Blog"
+    url: "https://writer.com/blog/"
+    topics: ["ai-agent", "enterprise", "product"]
+
+  # IBM AI Blog removed — 301 redirect, consistently 0 links
+  - name: "Databricks AI"
+    url: "https://www.databricks.com/blog/category/ai"
+    topics: ["data", "infrastructure", "engineering"]
+
+  - name: "Moveworks Blog"
+    url: "https://www.moveworks.com/us/en/resources/blog"
+    topics: ["ai-agent", "enterprise", "conversational-ai"]
+
+  # Microsoft .NET Agent Blog removed per request
+
+# ── Consulting Reports ──
+# 仅在星期一采集
+# 不会直接抓取页面，而是生成搜索查询 → 由 LLM filter 翻查
+consulting:
+  firms:
+    - "McKinsey"
+    - "BCG"
+    - "Deloitte"
+    - "PwC"
+    - "Accenture"
+    - "Bain"
+    - "KPMG"
+    - "IBM IBV"
+    - "Capgemini"
+    - "Stanford HAI"
+    - "CB Insights"
+
+  search_queries:
+    - '"{firm}" "enterprise AI" adoption report {month} {year}'
+    - '"{firm}" AI workforce OR reskilling report'
+    - '"{firm}" artificial intelligence organizational impact report'
+
+# ── Think Tank / Management Journals ──
+# 仅在星期一采集
+thinktank:
+  - name: "MIT Sloan Management Review AI"
+    url: "https://sloanreview.mit.edu/tag/artificial-intelligence/"
+    type: list_page
+    topics: ["management", "ai-adoption", "organization"]
+
+  - name: "HBR AI"
+    url: "https://hbr.org/topic/subject/technology-and-analytics/artificial-intelligence"
+    type: list_page
+    topics: ["management", "ai-adoption", "strategy"]
+
+  - name: "Knowledge at Wharton"
+    url: "https://knowledge.wharton.upenn.edu/"
+    type: list_page
+    topics: ["management", "business", "ai"]
+
+  - name: "RAND Corporation AI"
+    url: "https://www.rand.org/topics/artificial-intelligence.html"
+    type: list_page
+    topics: ["policy", "security", "defense"]
+
+# ── Podcasts ──
+# 仅在星期一采集（目前采集源不稳定，建议跳过）
+# podcast:
+#   - name: "HBR Podcasts"
+#     search_query: "..."
+
+# ── Filtering Rules ──
+# 定义内容相关度过滤的各个分类。每个分类指定关键词和权重。
+# 此配置会合并到 filter_items.py 的系统 prompt 中（通过模板变量注入）。
+filtering:
+  rules:
+    - id: "enterprise-ai-adoption"
+      label: "AI在企业中的实际落地"
+      weight: 80
+      keywords: ["deployment", "adoption", "implementation", "ROI", "workflow"]
+
+    - id: "org-talent"
+      label: "组织/人才/绩效"
+      weight: 80
+      keywords: ["workforce", "reskilling", "organization", "culture", "leadership"]
+
+    - id: "ai-governance"
+      label: "AI治理与风险合规"
+      weight: 70
+      keywords: ["risk", "compliance", "safety", "regulation", "governance"]
+
+    - id: "technical-architecture"
+      label: "AI系统建设/架构"
+      weight: 60
+      keywords: ["infrastructure", "architecture", "LLM", "training", "deployment"]
+
+    - id: "case-study"
+      label: "企业AI落地案例"
+      weight: 90
+      keywords: ["case study", "real-world", "production", "deployment"]
+
+    - id: "surprising-research"
+      label: "反常识AI研究"
+      weight: 40
+      keywords: ["unexpected", "surprising", "counterintuitive", "discovery"]

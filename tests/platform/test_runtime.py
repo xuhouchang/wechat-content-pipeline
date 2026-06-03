@@ -3,6 +3,7 @@ import subprocess
 
 import content_platform.runtime as runtime_module
 from content_platform.runtime import run_article_daily, run_case_daily, run_collect_daily
+from content_platform.storage.json_store import read_json
 
 
 LONG_ARTICLE_TEXT = " ".join(
@@ -278,3 +279,165 @@ def test_case_daily_invokes_legacy_writer_with_materials_file(tmp_path: Path, mo
     assert result["status"] == "success"
     assert any("decompose_case_study.py" in part for part in calls[0])
     assert "--materials" in calls[0]
+
+
+def test_collect_daily_uses_source_collectors_when_materials_not_provided(tmp_path: Path, monkeypatch):
+    calls = []
+
+    def fake_rss(date_str):
+        calls.append(("rss", date_str))
+        return [
+            {
+                "url": "https://example.com/rss",
+                "title": "Enterprise workflow redesign",
+                "summary": "workflow redesign adoption governance",
+                "content_text": LONG_ARTICLE_TEXT,
+                "source_type": "rss",
+                "source_name": "RSS Feed",
+                "execution_detail_score": 0.8,
+                "novelty_score": 0.7,
+            }
+        ]
+
+    def fake_blogs(date_str):
+        calls.append(("blogs", date_str))
+        return [
+            {
+                "url": "https://example.com/blog",
+                "title": "Manager incentives for AI adoption",
+                "summary": "enterprise adoption workflow manager incentives",
+                "content_text": LONG_ARTICLE_TEXT,
+                "source_type": "blogs",
+                "source_name": "Blog Source",
+                "execution_detail_score": 0.6,
+                "novelty_score": 0.8,
+            }
+        ]
+
+    def fake_consulting(date_str):
+        calls.append(("consulting", date_str))
+        return []
+
+    def fake_cases(date_str):
+        calls.append(("cases", date_str))
+        return []
+
+    monkeypatch.setattr(runtime_module, "load_rss_materials", fake_rss)
+    monkeypatch.setattr(runtime_module, "load_blog_materials", fake_blogs)
+    monkeypatch.setattr(runtime_module, "load_consulting_materials", fake_consulting)
+    monkeypatch.setattr(runtime_module, "load_case_materials", fake_cases)
+
+    result = run_collect_daily(date_str="2026-06-03", workspace_dir=tmp_path)
+    raw_materials = read_json(
+        tmp_path / "platform" / "ingest" / "raw" / "2026-06-03" / "materials.json"
+    )
+
+    assert result["status"] == "success"
+    assert calls == [
+        ("rss", "2026-06-03"),
+        ("blogs", "2026-06-03"),
+        ("consulting", "2026-06-03"),
+        ("cases", "2026-06-03"),
+    ]
+    assert [item["url"] for item in raw_materials] == [
+        "https://example.com/rss",
+        "https://example.com/blog",
+    ]
+
+
+def test_collect_daily_derives_execution_detail_score_when_not_provided(tmp_path: Path):
+    result = run_collect_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "url": "https://example.com/policy",
+                "title": "Responsible Scaling Policy",
+                "summary": "updated risk governance framework for frontier AI systems",
+                "content_text": (
+                    "this update introduces capability thresholds, internal governance, "
+                    "risk management, safeguards, model evaluation processes, and "
+                    "practical implementation guidance."
+                ),
+                "source_type": "blogs",
+                "source_name": "Example Blog",
+            }
+        ],
+    )
+
+    curated = read_json(
+        tmp_path / "platform" / "curate" / "2026-06-03" / "materials.json"
+    )
+
+    assert result["status"] == "success"
+    assert curated[0]["execution_detail_score"] >= 0.6
+
+
+def test_article_daily_persists_writer_logs_and_return_code(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        runtime_module.subprocess,
+        "run",
+        lambda cmd, capture_output, text, timeout: subprocess.CompletedProcess(
+            cmd,
+            0,
+            stdout="writer ok",
+            stderr="warning line",
+        ),
+    )
+
+    result = run_article_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "title": "Workflow redesign in support ops",
+                "editorial_fit_score": 0.9,
+                "novelty_score": 0.7,
+                "dedup": {"cluster_id": "c2"},
+                "quality": {"content_chars": 5000},
+                "url": "https://example.com/article",
+                "content": LONG_ARTICLE_TEXT,
+            },
+        ],
+    )
+
+    job_dir = tmp_path / "platform" / "jobs" / "2026-06-03" / "article-daily"
+    assert result["status"] == "success"
+    assert result["artifacts"]["writer_returncode"] == 0
+    assert Path(result["artifacts"]["writer_stdout_log"]).read_text(encoding="utf-8") == "writer ok"
+    assert Path(result["artifacts"]["writer_stderr_log"]).read_text(encoding="utf-8") == "warning line"
+    assert (job_dir / "writer_stdout.log").exists()
+    assert (job_dir / "writer_stderr.log").exists()
+
+
+def test_case_daily_fails_when_writer_returns_non_zero_and_persists_logs(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        runtime_module.subprocess,
+        "run",
+        lambda cmd, capture_output, text, timeout: subprocess.CompletedProcess(
+            cmd,
+            2,
+            stdout="partial output",
+            stderr="writer failed",
+        ),
+    )
+
+    result = run_case_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "title": "Support org agent deployment",
+                "editorial_fit_score": 0.8,
+                "execution_detail_score": 0.9,
+                "dedup": {"cluster_id": "c2"},
+                "url": "https://example.com/case",
+                "content": LONG_ARTICLE_TEXT,
+            },
+        ],
+    )
+
+    assert result["status"] == "failed"
+    assert result["artifacts"]["writer_returncode"] == 2
+    assert Path(result["artifacts"]["writer_stdout_log"]).read_text(encoding="utf-8") == "partial output"
+    assert Path(result["artifacts"]["writer_stderr_log"]).read_text(encoding="utf-8") == "writer failed"

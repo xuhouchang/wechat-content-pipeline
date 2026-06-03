@@ -379,11 +379,17 @@ def extract_digest(response: str) -> str:
 RECENT_TOPICS_FILE = OUTPUT_BASE / "_recent_topics.json"
 
 
-def _log_article_topic(title: str, digest: str, output_dir: Path, source_urls: list[str]):
+def _log_article_topic(
+    title: str,
+    digest: str,
+    output_dir: Path,
+    source_urls: list[str],
+    mark_source_urls: bool = True,
+):
     """Log article title+digest to a JSON file for diversity tracking.
     The sample_materials function reads this to avoid topic repetition.
 
-    ALSO marks each source_url as 'used' in all_urls.tsv so it won't
+    Optionally marks each source_url as 'used' in all_urls.tsv so it won't
     be selected again by get_all_collected_urls().
     """
     try:
@@ -406,7 +412,7 @@ def _log_article_topic(title: str, digest: str, output_dir: Path, source_urls: l
         marked = 0
         added = 0
         tsv_path = REPORTS_DIR / "_index" / "all_urls.tsv"
-        if source_urls:
+        if mark_source_urls and source_urls:
             tsv_path.parent.mkdir(parents=True, exist_ok=True)
             
             # Read existing content (empty file if doesn't exist)
@@ -888,7 +894,13 @@ def write_article(
         print(f"  ⚠️ No digest extracted (LLM didn't output '摘要:' line)")
 
     # ── Log article topic for diversity tracking ──
-    _log_article_topic(title, digest, output_dir, [s["url"] for s in sampled])
+    _log_article_topic(
+        title,
+        digest,
+        output_dir,
+        [s["url"] for s in sampled],
+        mark_source_urls=not bool(materials_override),
+    )
 
     # Step 6: Polish article with OpenAI via OpenRouter
     # Done BEFORE image matching — text must be finalized first

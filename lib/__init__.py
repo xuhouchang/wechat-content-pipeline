@@ -316,6 +316,8 @@ def _fetch_via_jina(url: str, timeout: int = 30) -> str | None:
     if not jina.get("enabled", False):
         return None
     api_key = jina.get("api_key", "")
+    if not api_key or api_key == "your_jina_api_key_here":
+        api_key = os.environ.get("JINA_API_KEY", "")
     base_url = jina.get("base_url", "https://r.jina.ai")
     if not api_key:
         return None

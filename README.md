@@ -2,6 +2,15 @@
 
 自动化内容采集 → 清洗聚合 → 选题 → 写作 → 配图 → 发布至微信公众号的完整流水线。
 
+## 安装
+
+先准备 Python 虚拟环境，然后安装运行时依赖：
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
 ## 当前主链路
 
 仓库已经切到新的文件制内容中台。当前推荐入口不是直接调用旧脚本，而是通过 `platform_cli.py`：
