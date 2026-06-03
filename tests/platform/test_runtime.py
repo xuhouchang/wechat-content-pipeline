@@ -1,5 +1,7 @@
 from pathlib import Path
+import subprocess
 
+import content_platform.runtime as runtime_module
 from content_platform.runtime import run_article_daily, run_case_daily, run_collect_daily
 
 
@@ -159,7 +161,14 @@ def test_case_daily_fails_when_no_candidates(tmp_path: Path):
     assert result["status"] == "failed"
 
 
-def test_article_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: Path):
+def test_article_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        runtime_module.subprocess,
+        "run",
+        lambda cmd, capture_output, text, timeout: subprocess.CompletedProcess(
+            cmd, 0, stdout="ok", stderr=""
+        ),
+    )
     run_collect_daily(
         date_str="2026-06-03",
         workspace_dir=tmp_path,
@@ -182,7 +191,14 @@ def test_article_daily_uses_collect_dataset_when_materials_not_provided(tmp_path
     assert result["status"] == "success"
 
 
-def test_case_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: Path):
+def test_case_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        runtime_module.subprocess,
+        "run",
+        lambda cmd, capture_output, text, timeout: subprocess.CompletedProcess(
+            cmd, 0, stdout="ok", stderr=""
+        ),
+    )
     run_collect_daily(
         date_str="2026-06-03",
         workspace_dir=tmp_path,
@@ -203,3 +219,62 @@ def test_case_daily_uses_collect_dataset_when_materials_not_provided(tmp_path: P
     result = run_case_daily(date_str="2026-06-03", workspace_dir=tmp_path)
 
     assert result["status"] == "success"
+
+
+def test_article_daily_invokes_legacy_writer_with_materials_file(tmp_path: Path, monkeypatch):
+    calls = []
+
+    def fake_run(cmd, capture_output, text, timeout):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(runtime_module.subprocess, "run", fake_run)
+
+    result = run_article_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "title": "Workflow redesign in support ops",
+                "editorial_fit_score": 0.9,
+                "novelty_score": 0.7,
+                "dedup": {"cluster_id": "c2"},
+                "quality": {"content_chars": 5000},
+                "url": "https://example.com/article",
+                "content": LONG_ARTICLE_TEXT,
+            },
+        ],
+    )
+
+    assert result["status"] == "success"
+    assert any("write_article.py" in part for part in calls[0])
+    assert "--materials" in calls[0]
+
+
+def test_case_daily_invokes_legacy_writer_with_materials_file(tmp_path: Path, monkeypatch):
+    calls = []
+
+    def fake_run(cmd, capture_output, text, timeout):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(runtime_module.subprocess, "run", fake_run)
+
+    result = run_case_daily(
+        date_str="2026-06-03",
+        workspace_dir=tmp_path,
+        materials=[
+            {
+                "title": "Support org agent deployment",
+                "editorial_fit_score": 0.8,
+                "execution_detail_score": 0.9,
+                "dedup": {"cluster_id": "c2"},
+                "url": "https://example.com/case",
+                "content": LONG_ARTICLE_TEXT,
+            },
+        ],
+    )
+
+    assert result["status"] == "success"
+    assert any("decompose_case_study.py" in part for part in calls[0])
+    assert "--materials" in calls[0]

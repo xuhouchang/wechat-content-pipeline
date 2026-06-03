@@ -1,5 +1,7 @@
 from datetime import datetime
 from pathlib import Path
+import subprocess
+import sys
 
 from content_platform.business.case_study.pipeline import run_case_study_pipeline
 from content_platform.business.daily_article.pipeline import run_daily_article_pipeline
@@ -115,6 +117,18 @@ def _load_dataset_candidates(
     return payload.get("candidates", [])
 
 
+def _invoke_legacy_writer(script_path: Path, date_str: str, materials_file: str) -> subprocess.CompletedProcess:
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--date",
+        date_str,
+        "--materials",
+        materials_file,
+    ]
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+
 def run_article_daily(
     date_str: str,
     workspace_dir: Path | None = None,
@@ -141,6 +155,15 @@ def run_article_daily(
         "selection_file": result.get("selection_file"),
         "materials_file": result.get("materials_file"),
     }
+    if job["status"] == "success" and result.get("materials_file"):
+        legacy_result = _invoke_legacy_writer(
+            resolved_workspace / "write_article.py",
+            date_str=date_str,
+            materials_file=result["materials_file"],
+        )
+        job["artifacts"]["writer_stdout"] = legacy_result.stdout
+        if legacy_result.returncode != 0:
+            job["status"] = "failed"
     store.write_job(job)
     return job
 
@@ -171,6 +194,15 @@ def run_case_daily(
         "selection_file": result.get("selection_file"),
         "materials_file": result.get("materials_file"),
     }
+    if job["status"] == "success" and result.get("materials_file"):
+        legacy_result = _invoke_legacy_writer(
+            resolved_workspace / "decompose_case_study.py",
+            date_str=date_str,
+            materials_file=result["materials_file"],
+        )
+        job["artifacts"]["writer_stdout"] = legacy_result.stdout
+        if legacy_result.returncode != 0:
+            job["status"] = "failed"
     store.write_job(job)
     return job
 
